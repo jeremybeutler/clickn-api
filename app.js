@@ -1,35 +1,22 @@
-// const express = require('express')
-// const bodyParser = require('body-parser')
-
-// const app = express()
-// app.use(bodyParser.json())
-// app.user(bodyParser.urlencoded({
-//     extended: false
-// }))
-
-// const mongoose = require('mongoose')
-
-// mongoose.connect('mongodb://localhost:27017/clickn', {
-//     useNewUrlParser: true
-// })
-
-// const users = require("./users.js");
-// app.use("/api/users", users.routes);
-
-// app.listen(3001, () => console.log('Server listening at port 3001!'))
-
-// 
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
 const mongoose = require('mongoose')
 
 const userRoutes = require('./api/routes/users')
+const eventRoutes = require('./api/routes/events')
+const clickRoutes = require('./api/routes/clicks')
 
-app.use(bodyParser.urlencoded({
-        extended: false
-    })
-)
+    mongoose.connect(
+        'mongodb+srv://clickn-admin:' + process.env.MONGO_ATLAS_PW + '@clickn-db-2zrbr.mongodb.net/test?retryWrites=true&w=majority',
+        { useCreateIndex: true, useNewUrlParser: true }
+    ).then(() => {
+        console.log('Connected to mongodb')
+    }).catch((err) => {
+        console.log('Failed to connect to mongodb with error:', err)
+    });
+
+app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 app.use((req, res, next) => {
@@ -46,6 +33,7 @@ app.use((req, res, next) => {
 })
 
 app.use('/users', userRoutes)
+app.use('/events', eventRoutes)
 
 app.use((req, res, next) => {
     const error = new Error('Not found')
