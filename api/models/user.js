@@ -17,6 +17,10 @@ const userSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Event' 
     }],
+    reviewable_events: [{ 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Event' 
+    }],
     archived_events: [{ 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Event' 

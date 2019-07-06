@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const userSchema = mongoose.Schema({
+const optInSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     clicking_user: { 
         type: Schema.Types.ObjectId, 
@@ -16,4 +16,4 @@ const userSchema = mongoose.Schema({
     },
 })
 
-module.exports = mongoose.model('Preclick', preclickSchema)
+module.exports = mongoose.model('OptIn', optInSchema)

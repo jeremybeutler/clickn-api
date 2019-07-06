@@ -9,7 +9,7 @@ const clickRoutes = require('./api/routes/clicks')
 
     mongoose.connect(
         'mongodb+srv://clickn-admin:' + process.env.MONGO_ATLAS_PW + '@clickn-db-2zrbr.mongodb.net/test?retryWrites=true&w=majority',
-        { useCreateIndex: true, useNewUrlParser: true }
+        { useCreateIndex: true, useNewUrlParser: true, useFindAndModify: false }
     ).then(() => {
         console.log('Connected to mongodb')
     }).catch((err) => {

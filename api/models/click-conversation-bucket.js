@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 
-const message = new Schema({
+const message = new mongoose.Schema({
     posted: Date,
     author: { 
         type: mongoose.Schema.Types.ObjectId, 

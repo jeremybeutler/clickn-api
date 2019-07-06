@@ -2,18 +2,6 @@
 
 const mongoose = require('mongoose')
 
-const pointSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['Point'],
-    required: true
-  },
-  coordinates: {
-    type: [Number],
-    required: true
-  },
-});
-
 const eventSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
     users: [{
@@ -38,7 +26,8 @@ const eventSchema = mongoose.Schema({
     },
     datetime_start: Date,
     datetime_end: Date,
-    datetime_close: Date
+    datetime_close: Date,
+    status: String
 })
 
 eventSchema.index({

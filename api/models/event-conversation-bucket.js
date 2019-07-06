@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 
 const message = new mongoose.Schema({
     posted: Date,
-    author: { 
+    author: {
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User' 
     },
@@ -11,7 +11,7 @@ const message = new mongoose.Schema({
 
 const eventConversationBucketSchema = mongoose.Schema({
     _id: mongoose.Schema.Types.ObjectId,
-    event_id: { 
+    event_id: {
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Event' 
     },
