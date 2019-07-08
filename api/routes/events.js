@@ -68,7 +68,7 @@ router.post('/', async (req, res, next) => {
     try {
         const event = new Event({
             _id: new mongoose.Types.ObjectId(),
-            users: [],
+            users: [req.body.owner_id],
             owner: req.body.owner_id,
             capacity: req.body.capacity,
             title: req.body.tile,
@@ -131,6 +131,34 @@ router.delete('/:id', async (req, res, next) => {
     }
 })
 
+router.patch('/complete/:eventId', async (req, res, next) => {
+    const event_id = req.params.eventId
+        try {
+            let event = await Event.findByIdAndUpdate(event_id,
+                { "$set": { status: "complete" } }
+            )  
+            console.log(event.users)
+
+            await User.updateMany({ _id: { $in: event.users } },
+                { $pullAll: { active_events: [event_id] } },
+            )
+
+            await User.updateMany({ _id: { $in: event.users } },
+                { $push: { reviewable_events:  event_id } }
+            )
+
+            res.status(200).json({
+                event: event,
+            })
+
+        } catch (error) {
+            console.log(error)
+            res.status(500).json({
+                error: error
+            })
+        }
+})
+
 // Updates supplied user properties
 router.patch('/:id', async (req, res, next) => {
     const id = req.params.id
@@ -147,37 +175,6 @@ router.patch('/:id', async (req, res, next) => {
             error: error
         })
     }
-})
-
-router.patch('/complete/:id', async (req, res, next) => {
-    const event_id = req.params.id
-
-    try {
-        let event = await Event.findByIdAndUpdate(event_id,
-            { "$set": { status: "complete" } }
-        )
-
-        // TODO: Debug this!!
-        // await User.updateMany({ _id: { $in: event.users } },
-        //     { "$pull": { "active_events": { _id: event_id } } },
-        //     false, true
-        // )
-
-        // await User.updateMany({ _id: { $in: event.users } },
-        //     { "$push": { "reviewable_events": { _id: event_id } } }
-        // )
-
-        res.status(200).json({
-            event: event,
-            users: users
-        })
-    } catch (err) {
-        res.status(500).json({
-            error: err
-        })
-    }
-
-
 })
 
 module.exports = router
