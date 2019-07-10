@@ -49,29 +49,30 @@ router.post('/:userId/reviewEvent/:eventId', async (req, res, next) => {
             })
             .select('clicking_user');
         
+        console.log('matched_opt_ins')
+        console.log(matched_opt_ins)
+        
         // Create click with each mutually opting user
         // Update clicks array for each mutually opting user
         matched_opt_ins.forEach(async (matched_opt_in) => {
-            matched_opt_in = matched_opt_in.clicking_user
+            let matched_clicking_user = matched_opt_in.clicking_user
             let click = new Click({
                 _id: new mongoose.Types.ObjectId(),
                 user_1: clicking_user,
-                user_2: matched_opt_in,
+                user_2: matched_clicking_user,
                 shared_events: [reviewed_event]
             })
             await click.save()
             click_id = click.id
 
-            await User.findByIdAndUpdate(matched_opt_in, { 
+            await User.findByIdAndUpdate(matched_clicking_user, { 
                 $push: { clicks: click_id }
             })
 
             new_clicks.push(click)
             new_click_ids.push(click_id)
-            new_click__ids.push(click._id)
         })
 
-        console.log(new_click__ids)
         console.log(new_click_ids)
 
         // Update clicks array for clicking user
