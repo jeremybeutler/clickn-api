@@ -1,8 +1,8 @@
 const express = require('express')
 const router = express.Router()
-const mongoose = require('mongoose')
+// const mongoose = require('mongoose')
 
-const Tag = require('../models/tag')
+// const Tag = require('../models/tag')
 
 router.get('/', async (req, res, next) => {
     try {

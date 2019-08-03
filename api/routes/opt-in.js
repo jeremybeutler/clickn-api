@@ -1,8 +1,8 @@
 const express = require('express')
 const router = express.Router()
-const mongoose = require('mongoose')
+// const mongoose = require('mongoose')
 
-const OptIn = require('../models/opt-in')
+// const OptIn = require('../models/opt-in')
 
 router.get('/', async (req, res, next) => {
     try {

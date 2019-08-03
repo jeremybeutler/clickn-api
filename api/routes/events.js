@@ -1,10 +1,10 @@
 const express = require('express')
 const router = express.Router()
-const mongoose = require('mongoose')
+// const mongoose = require('mongoose')
 
-const Event = require('../models/event')
-const EventConversationBucket = require('../models/event-conversation-bucket')
-const User = require('../models/user')
+// const Event = require('../models/event')
+// const EventConversationBucket = require('../models/event-conversation-bucket')
+// const User = require('../models/user')
 
 router.get('/', async (req, res, next) => {
     try {

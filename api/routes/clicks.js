@@ -1,9 +1,9 @@
 const express = require('express')
 const router = express.Router()
-const mongoose = require('mongoose')
+// const mongoose = require('mongoose')
 
-const Click = require('../models/click')
-const ClickConversationBucket = require('../models/click-conversation-bucket')
+// const Click = require('../models/click')
+// const ClickConversationBucket = require('../models/click-conversation-bucket')
 
 router.get('/', async (req, res, next) => {
     try {

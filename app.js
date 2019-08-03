@@ -1,20 +1,20 @@
+let mongodb_connect = require('./mongodb-connect.js');
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
-const mongoose = require('mongoose')
 
 const userRoutes = require('./api/routes/users')
 const eventRoutes = require('./api/routes/events')
 const clickRoutes = require('./api/routes/clicks')
 
-    mongoose.connect(
-        'mongodb+srv://clickn-admin:' + process.env.MONGO_ATLAS_PW + '@clickn-db-2zrbr.mongodb.net/test?retryWrites=true&w=majority',
-        { useCreateIndex: true, useNewUrlParser: true, useFindAndModify: false }
-    ).then(() => {
-        console.log('Connected to mongodb')
-    }).catch((err) => {
-        console.log('Failed to connect to mongodb with error:', err)
-    });
+//setup express...
+
+//initialize the db connection
+mongodb_connect.init((error) => {
+    if (error)
+        throw error;
+});
+console.log(mongodb_connect)
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
