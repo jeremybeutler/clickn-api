@@ -7,15 +7,6 @@ const userRoutes = require('./api/routes/users')
 const eventRoutes = require('./api/routes/events')
 const clickRoutes = require('./api/routes/clicks')
 
-//setup express...
-
-//initialize the db connection
-mongodb_connect.init((error) => {
-    if (error)
-        throw error;
-});
-console.log(mongodb_connect)
-
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 

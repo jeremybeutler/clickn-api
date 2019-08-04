@@ -1,18 +1,8 @@
 const express = require('express')
 const router = express.Router()
 
-let mongodb_connect = require('../../mongodb-connect.js');
-console.log(mongodb_connect)
-//   use the collection object exported by mongo.js
-// mongodb_connect.users.insert({test: 'obj'}, {safe:true}, function(err, objects) {
-//     if (err)
-//         console.warn(err.message);
-// })
-
-// const User = require('../models/user')
-// const Event = require('../models/event')
-// const OptIn = require('../models/opt-in')
-// const Click = require('../models/click')
+let mongodb_connect = require('../../mongodb-connect');
+console.log(mongodb_connect.db)
 
 router.get('/', async (req, res, next) => {
     try {
