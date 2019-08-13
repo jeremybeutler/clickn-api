@@ -53,7 +53,8 @@ router.post('/:userId/reviewEvent/:eventId', async (req, res, next) => {
             let click = await Click.insertOne({
                 user_1: clicking_user_oid,
                 user_2: matched_clicking_user_oid,
-                shared_events: [reviewed_event_oid]
+                shared_events: [reviewed_event_oid],
+                created: new Date().getTime()
             })
             let click_oid = new mongodb.ObjectID(click.ops[0]._id)
 
@@ -255,7 +256,9 @@ router.post('/', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
     const id = new mongodb.ObjectID(req.params.id)
     try {
-        let result = await User.remove({ _id: id })
+        let result = await User.remove({ 
+            _id: id 
+        })
         console.log(result)
         res.status(200).json(result)
     } catch (error) {

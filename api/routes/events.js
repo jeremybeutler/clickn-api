@@ -1,15 +1,22 @@
 const express = require('express')
 const router = express.Router()
+const mongodb = require('mongodb')
+const mongodb_connect = require('../../mongodb-connect');
 // const mongoose = require('mongoose')
 
 // const Event = require('../models/event')
 // const EventConversationBucket = require('../models/event-conversation-bucket')
 // const User = require('../models/user')
+const Event = mongodb_connect.db.collection('events')
+const User = mongodb_connect.db.collection('users')
+// const Conversation = mongodb_connect.db.collection('conversation')
+const ConversationBucket = mongodb_connect.db.collection('conversationbucket')
+// const Message = mongodb_connect.db.collection('messages')
 
 router.get('/', async (req, res, next) => {
     try {
-        const event = await Event.find()
-        res.status(200).json(event);
+        const events = await Event.find({}).toArray()
+        res.status(200).json(events);
     } catch (error) {
         res.status(500).json({
         error: error
@@ -17,10 +24,37 @@ router.get('/', async (req, res, next) => {
     }
 })
 
-router.get('/:id', async (req, res, next) => {
-    const id = req.params.id
+// Retrieves a list of active events
+router.get('/search', async (req, res, next) => {
     try {
-        const event = await Event.findById(id)
+        const events = await Event.find(
+            { location:
+                { $near :
+                    {
+                        $geometry: { type: "Point",  coordinates: [ req.body.longitude, req.body.latitude ] },
+                        $maxDistance: req.body.search_radius
+                    }
+                }
+            }
+        ).toArray()
+
+        console.log(events)
+        res.status(200).json({
+            events: events,
+        })
+    } catch (error) {
+        res.status(404).json({
+            error: error
+        })
+    }
+})
+
+router.get('/:id', async (req, res, next) => {
+    const id = new mongodb.ObjectID(req.params.id)
+    try {
+        const event = await Event.findOne({
+            _id: id
+        })
         if (event) {
             res.status(200).json(event)
         } else {
@@ -37,44 +71,26 @@ router.get('/:id', async (req, res, next) => {
     }
 })
 
-router.get('/search', async (req, res, next) => {
-    try {
-        let events = await Event.find({
-            location: {
-                $near: {
-                    $maxDistance: req.body.search_radius,
-                    $geometry: {
-                        type: "Point",
-                        coordinates: [req.body.longitude, req.body.lattitude]
-                    }
-                }
-            }
-        })
-        res.status(200).json({
-            events: events,
-        })
-    } catch (error) {
-        res.status(404).json({
-            error: error
-        })
-    }
-})
-
 router.post('/', async (req, res, next) => {
+    let owner_oid = new mongodb.ObjectId(req.body.owner_id)
     let tags = []
     for (let tag in req.body.tags)
         tags.push(tag)
 
     try {
-        const event = new Event({
-            _id: new mongoose.Types.ObjectId(),
-            users: [req.body.owner_id],
-            owner: req.body.owner_id,
+        const event = await Event.insertOne({
+            users: [owner_oid],
+            owner: owner_oid,
             capacity: req.body.capacity,
-            title: req.body.tile,
+            title: req.body.title,
             description: req.body.description,
             tags: req.body.tags,
             group_type: req.body.group_type,
+            datetime_start: req.body.datetime_start,
+            datetime_end: req.body.datetime_end,
+            datetime_open: req.body.datetime_open,
+            datetime_close: req.body.datetime_close,
+            status: 'active',
             location: {
                 type: 'Point',
                 coordinates: [
@@ -82,32 +98,19 @@ router.post('/', async (req, res, next) => {
                     req.body.latitude
                 ]
             },
-            datetime_start: req.body.datetime_start,
-            datetime_end: req.body.datetime_end,
-            datetime_open: req.body.datetime_open,
-            datetime_close: req.body.datetime_close,
-            status: "active"
+            conversation: {
+                _id: new mongodb.ObjectId(),
+                created: new Date(),
+            }
         })
+        let event_oid = new mongodb.ObjectId(event.ops[0]._id)
+        const user = await User.findOneAndUpdate(
+            { _id: owner_oid },
+            { $push: { active_events: event_oid } }
+        )
 
-        await event.save()
-       
-        const event_conversation = new EventConversationBucket({
-            _id: new mongoose.Types.ObjectId(),
-            event_id: event.id,
-            bucket: 0,
-            count: 0,
-            messages: []
-        })
-
-        await event_conversation.save()
-
-        const user = await User.findByIdAndUpdate(req.body.owner_id,
-            { "$push": { "active_events": event.id } 
-        })
-
-        res.status(201).json({
-            createdEvent: event,
-            createdEventConversationBucket: event_conversation
+        res.status(200).json({
+            createdEvent: event_oid
         })
     } catch (error) {
         console.log(error)
@@ -118,9 +121,11 @@ router.post('/', async (req, res, next) => {
 })
 
 router.delete('/:id', async (req, res, next) => {
-    const id = req.params.id
+    const id = new mongodb.ObjectID(req.params.id)
     try {
-        let result = await Event.remove({ _id: id })
+        let result = await Event.remove({ 
+            _id: id 
+        })
         console.log(result)
         res.status(200).json(result)
     } catch (error) {
@@ -132,49 +137,50 @@ router.delete('/:id', async (req, res, next) => {
 })
 
 router.patch('/complete/:eventId', async (req, res, next) => {
-    const event_id = req.params.eventId
-        try {
-            let event = await Event.findByIdAndUpdate(event_id,
-                { "$set": { status: "complete" } }
-            )  
-            console.log(event.users)
-
-            await User.updateMany({ _id: { $in: event.users } },
-                { $pullAll: { active_events: [event_id] } },
-            )
-
-            await User.updateMany({ _id: { $in: event.users } },
-                { $push: { reviewable_events:  event_id } }
-            )
-
-            res.status(200).json({
-                event: event,
-            })
-
-        } catch (error) {
-            console.log(error)
-            res.status(500).json({
-                error: error
-            })
-        }
-})
-
-// Updates supplied user properties
-router.patch('/:id', async (req, res, next) => {
-    const id = req.params.id
-    const updateOps = {}
-    for (const ops of req.body) {
-        updateOps[ops.propName] = ops.value;
-    }
+    const event_oid = new mongodb.ObjectID(req.params.eventId)
     try {
-        let result = await Event.update({ _id: id }, { $set: updateOps })
-        console.log(result)
-        res.status(200).json(result)
+        let event = await Event.findOneAndUpdate(
+            { _id: event_oid },
+            { $set: { status: "complete" } }
+        )
+        let event_users = event.value.users
+        console.log(event_users)
+
+        await User.updateMany(
+            { _id: { $in: event_users } },
+            { $pullAll: { active_events: [event_oid] } },
+        )
+        await User.updateMany(
+            { _id: { $in: event_users } },
+            { $push: { reviewable_events:  event_oid } }
+        )
+        res.status(200).json({
+            event: event.value
+        })
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             error: error
         })
     }
 })
+
+// Updates supplied user properties
+// router.patch('/:id', async (req, res, next) => {
+//     const id = req.params.id
+//     const updateOps = {}
+//     for (const ops of req.body) {
+//         updateOps[ops.propName] = ops.value;
+//     }
+//     try {
+//         let result = await Event.update({ _id: id }, { $set: updateOps })
+//         console.log(result)
+//         res.status(200).json(result)
+//     } catch (error) {
+//         res.status(500).json({
+//             error: error
+//         })
+//     }
+// })
 
 module.exports = router
