@@ -1,14 +1,18 @@
 const express = require('express')
 const router = express.Router()
-// const mongoose = require('mongoose')
+const mongodb = require('mongodb')
+const mongodb_connect = require('../../mongodb-connect');
 
-// const Click = require('../models/click')
-// const ClickConversationBucket = require('../models/click-conversation-bucket')
+const Click = mongodb_connect.db.collection('clicks')
+const Event = mongodb_connect.db.collection('event')
+
+// Todo:
+// Add shared event
 
 router.get('/', async (req, res, next) => {
     try {
-        const click = await Click.find()
-        res.status(200).json(click);
+        const clicks = await Click.find({}).toArray()
+        res.status(200).json(clicks);
     } catch (error) {
         res.status(500).json({
             error: error
@@ -16,43 +20,12 @@ router.get('/', async (req, res, next) => {
     }
 })
 
-router.post('/', async (req, res, next) => {
-    try {
-        const click = new Click({
-            _id: new mongoose.Types.ObjectId(),
-            user_1: req.body.user_1,
-            user_2: req.body.user_2,
-            shared_events: [req.body.first_event]
-        })
-
-        await click.save()
-
-        const click_conversation_bucket = new ClickConversationBucket({
-            _id: new mongoose.Types.ObjectId(),
-            click_id: click.id,
-            bucket: 0,
-            count: 0,
-            messages: []
-        })
-
-        await click_conversation_bucket.save()
-
-        res.status(201).json({
-            createdClick: event,
-            createdClickConversationBucket: click_conversation_bucket
-        })
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({
-            error: error
-        })
-    }
-})
-
 router.get('/:id', async (req, res, next) => {
-    const id = req.params.id
+    const id = new mongodb.ObjectID(req.params.id)
     try {
-        const click = await Click.findById(id)
+        const click = await Click.findOne({
+            _id: id
+        })
         if (click) {
             res.status(200).json(click)
         } else {
@@ -68,10 +41,28 @@ router.get('/:id', async (req, res, next) => {
     }
 })
 
+router.patch('/:id/addSharedEvent/:eventId', async (req, res, next) => {
+    const oid = new mongodb.ObjectID(id)
+    const event_oid = new mongodb.ObjectID(eventId)
+    try {
+        let click = await Event.findOneAndUpdate(
+            { _id: oid },
+            { $push: { shared_events: event_oid } }
+        )
+        res.status(200).json({
+            updatedEvent: click.value
+        })
+    } catch (error) {
+
+    }
+})
+
 router.delete('/:id', async (req, res, next) => {
     const id = req.params.id
     try {
-        let result = await Click.remove({ _id: id })
+        let result = await Click.remove({ 
+            _id: id
+         })
         console.log(result)
         res.status(200).json(result)
     } catch (error) {

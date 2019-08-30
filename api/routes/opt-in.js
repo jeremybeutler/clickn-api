@@ -15,23 +15,23 @@ router.get('/', async (req, res, next) => {
     }
 })
 
-router.post('/', async (req, res, next) => {
-    try {
-        const opt_in = new OptIn({
-            _id: new mongoose.Types.ObjectId(),
-            clicking_user: req.body.clicking_user_id,
-            clicked_user: req.body.clicked_user_id,
-            event: req.body.event_id
-        })
+// router.post('/', async (req, res, next) => {
+//     try {
+//         const opt_in = new OptIn({
+//             _id: new mongoose.Types.ObjectId(),
+//             clicking_user: req.body.clicking_user_id,
+//             clicked_user: req.body.clicked_user_id,
+//             event: req.body.event_id
+//         })
 
-        await opt_in.save()
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({
-            error: error
-        })
-    }
-})
+//         await opt_in.save()
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).json({
+//             error: error
+//         })
+//     }
+// })
 
 router.get('/:id', async (req, res, next) => {
     const id = req.params.id

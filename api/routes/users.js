@@ -19,73 +19,6 @@ router.get('/', async (req, res, next) => {
     }
 })
 
-router.post('/:userId/reviewEvent/:eventId', async (req, res, next) => {
-    try {
-        let clicked_users = req.body.clicked_users
-        let clicked_users_oids = clicked_users.map(x => new mongodb.ObjectID(x))
-        let clicking_user_oid = new mongodb.ObjectID(req.params.userId)
-        let reviewed_event_oid = new mongodb.ObjectID(req.params.eventId)
-        var new_click_oids = []
-
-        // Create opt-ins for each selected user
-        for (const clicked_user of clicked_users) {
-            const clicked_user_oid = new mongodb.ObjectID(clicked_user)
-            let opt_in = await OptIn.insertOne({
-                clicking_user: clicking_user_oid,
-                clicked_user: clicked_user_oid,
-                event: reviewed_event_oid
-            });
-        }
-
-        // Find mutually opting users
-        let matched_opt_ins = await OptIn.find({
-            event: reviewed_event_oid, 
-            clicked_user: clicking_user_oid,
-            clicking_user: { $in: clicked_users_oids }
-        })
-        .project({ clicking_user: 1 })
-        .toArray();
-
-        // Create click with clicking user and each mutually opting user
-        // Update clicks array for each mutually opting user
-        for (const matched_opt_in of matched_opt_ins) {
-            const matched_clicking_user_oid = new mongodb.ObjectID(matched_opt_in.clicking_user)
-            let click = await Click.insertOne({
-                user_1: clicking_user_oid,
-                user_2: matched_clicking_user_oid,
-                shared_events: [reviewed_event_oid],
-                created: new Date().getTime()
-            })
-            let click_oid = new mongodb.ObjectID(click.ops[0]._id)
-
-            await User.findOneAndUpdate(
-                { _id: matched_clicking_user_oid },
-                { $push: { clicks: click_oid } },
-            )
-            new_click_oids.push(click_oid)
-        }
-
-        // Update clicks array for clicking user
-        // Archive the event for the clicking user
-        await User.findOneAndUpdate(
-            { _id: clicking_user_oid },
-            { 
-                $addToSet: { clicks: { $each: new_click_oids } }, 
-                $pull: { reviewable_events: reviewed_event_oid },
-                $push: { archived_events: reviewed_event_oid }
-            }
-        )
-        res.status(200).json({
-            newClicks: new_click_oids
-        })
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({
-            error: error
-        })
-    }
-})
-
 // Retrieves active events for a given user
 router.get('/:id/activeEvents', async (req, res, next) => {
     const id = new mongodb.ObjectID(req.params.id)
@@ -226,6 +159,103 @@ router.get('/:id', async (req, res, next) => {
     }
 })
 
+// Adds user to existing event
+router.patch('/:userId/joinEvent/:eventId', async (req, res, next) => {
+    const user_oid = new mongodb.ObjectID(req.params.userId)
+    const event_oid = new mongodb.ObjectID(req.params.eventId)
+    try {
+        const user = await User.findOneAndUpdate(
+            { _id: user_oid },
+            { $push: { active_events: event_oid } },
+            { returnOriginal: false }
+        )
+        const event = await Event.findOneAndUpdate(
+            { _id: event_oid },
+            { $push: { users: user_oid } },
+            { returnOriginal: false }
+        )
+        res.status(200).json({
+            updatedUser: user.value,
+            updatedEvent: event.value
+        })
+    } catch (error) {
+        res.status(500).json({
+            error: error
+        })
+    }
+})
+
+router.post('/:id/reviewEvent/:eventId', async (req, res, next) => {
+    try {
+        let clicked_users = req.body.clicked_users
+        let clicked_users_oids = clicked_users.map(x => new mongodb.ObjectID(x))
+        let clicking_user_oid = new mongodb.ObjectID(req.params.id)
+        let reviewed_event_oid = new mongodb.ObjectID(req.params.eventId)
+        var new_click_oids = []
+
+        // Create opt-ins for each selected user
+        for (const clicked_user of clicked_users) {
+            const clicked_user_oid = new mongodb.ObjectID(clicked_user)
+            let opt_in = await OptIn.insertOne({
+                clicking_user: clicking_user_oid,
+                clicked_user: clicked_user_oid,
+                event: reviewed_event_oid
+            });
+        }
+
+        // Find mutually opting users
+        let matched_opt_ins = await OptIn.find({
+            event: reviewed_event_oid, 
+            clicked_user: clicking_user_oid,
+            clicking_user: { $in: clicked_users_oids }
+        })
+        .project({ clicking_user: 1 })
+        .toArray();
+
+        // Create click with clicking user and each mutually opting user
+        // Update clicks array for each mutually opting user
+        for (const matched_opt_in of matched_opt_ins) {
+            const matched_clicking_user_oid = new mongodb.ObjectID(matched_opt_in.clicking_user)
+            let click = await Click.insertOne({
+                user_1: clicking_user_oid,
+                user_2: matched_clicking_user_oid,
+                shared_events: [reviewed_event_oid],
+                created: new Date().getTime(),
+                conversation: {
+                    _id: new mongodb.ObjectId(),
+                    created: new Date(),
+                }
+            })
+            let click_oid = new mongodb.ObjectID(click.ops[0]._id)
+
+            await User.findOneAndUpdate(
+                { _id: matched_clicking_user_oid },
+                { $push: { clicks: click_oid } },
+            )
+            new_click_oids.push(click_oid)
+        }
+
+        // Update clicks array for clicking user
+        // Archive the event for the clicking user
+        await User.findOneAndUpdate(
+            { _id: clicking_user_oid },
+            { 
+                $addToSet: { clicks: { $each: new_click_oids } }, 
+                $pull: { reviewable_events: reviewed_event_oid },
+                $push: { archived_events: reviewed_event_oid }
+            }
+        )
+        res.status(200).json({
+            newClicks: new_click_oids
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            error: error
+        })
+    }
+})
+
 // Creates new clickn user account
 router.post('/', async (req, res, next) => {
     try {
@@ -263,50 +293,6 @@ router.delete('/:id', async (req, res, next) => {
         res.status(200).json(result)
     } catch (error) {
         console.log(error)
-        res.status(500).json({
-            error: error
-        })
-    }
-})
-
-// Updates supplied user properties
-// router.patch('/:id', async (req, res, next) => {
-//     const id = req.params.id
-//     const updateOps = {}
-//     for (const ops of req.body) {
-//         updateOps[ops.propName] = ops.value;
-//     }
-//     try {
-//         let result = await User.update({ _id: id }, { $set: updateOps })
-//         console.log(result)
-//         res.status(200).json(result)
-//     } catch (error) {
-//         res.status(500).json({
-//             error: error
-//         })
-//     }
-// })
-
-// Adds user to existing event
-router.patch('/:userId/joinEvent/:eventId', async (req, res, next) => {
-    const user_oid = new mongodb.ObjectID(req.params.userId)
-    const event_oid = new mongodb.ObjectID(req.params.eventId)
-    try {
-        const user = await User.findOneAndUpdate(
-            { _id: user_oid },
-            { $push: { active_events: event_oid } },
-            { returnOriginal: false }
-        )
-        const event = await Event.findOneAndUpdate(
-            { _id: event_oid },
-            { $push: { users: user_oid } },
-            { returnOriginal: false }
-        )
-        res.status(200).json({
-            updatedUser: user.value,
-            updatedEvent: event.value
-        })
-    } catch (error) {
         res.status(500).json({
             error: error
         })

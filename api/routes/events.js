@@ -2,16 +2,9 @@ const express = require('express')
 const router = express.Router()
 const mongodb = require('mongodb')
 const mongodb_connect = require('../../mongodb-connect');
-// const mongoose = require('mongoose')
 
-// const Event = require('../models/event')
-// const EventConversationBucket = require('../models/event-conversation-bucket')
-// const User = require('../models/user')
 const Event = mongodb_connect.db.collection('events')
 const User = mongodb_connect.db.collection('users')
-// const Conversation = mongodb_connect.db.collection('conversation')
-const ConversationBucket = mongodb_connect.db.collection('conversationbucket')
-// const Message = mongodb_connect.db.collection('messages')
 
 router.get('/', async (req, res, next) => {
     try {
@@ -25,7 +18,7 @@ router.get('/', async (req, res, next) => {
 })
 
 // Retrieves a list of active events
-router.get('/search', async (req, res, next) => {
+router.post('/search', async (req, res, next) => {
     try {
         const events = await Event.find(
             { location:
@@ -64,6 +57,35 @@ router.get('/:id', async (req, res, next) => {
         }
     }
     catch (error) {
+        console.log(error)
+        res.status(500).json({
+            error: error
+        })
+    }
+})
+
+router.patch('/complete/:eventId', async (req, res, next) => {
+    const event_oid = new mongodb.ObjectID(req.params.eventId)
+    try {
+        let event = await Event.findOneAndUpdate(
+            { _id: event_oid },
+            { $set: { status: "complete" } }
+        )
+        let event_users = event.value.users
+        console.log(event_users)
+
+        await User.updateMany(
+            { _id: { $in: event_users } },
+            { $pullAll: { active_events: [event_oid] } },
+        )
+        await User.updateMany(
+            { _id: { $in: event_users } },
+            { $push: { reviewable_events:  event_oid } }
+        )
+        res.status(200).json({
+            event: event.value
+        })
+    } catch (error) {
         console.log(error)
         res.status(500).json({
             error: error
@@ -128,35 +150,6 @@ router.delete('/:id', async (req, res, next) => {
         })
         console.log(result)
         res.status(200).json(result)
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({
-            error: error
-        })
-    }
-})
-
-router.patch('/complete/:eventId', async (req, res, next) => {
-    const event_oid = new mongodb.ObjectID(req.params.eventId)
-    try {
-        let event = await Event.findOneAndUpdate(
-            { _id: event_oid },
-            { $set: { status: "complete" } }
-        )
-        let event_users = event.value.users
-        console.log(event_users)
-
-        await User.updateMany(
-            { _id: { $in: event_users } },
-            { $pullAll: { active_events: [event_oid] } },
-        )
-        await User.updateMany(
-            { _id: { $in: event_users } },
-            { $push: { reviewable_events:  event_oid } }
-        )
-        res.status(200).json({
-            event: event.value
-        })
     } catch (error) {
         console.log(error)
         res.status(500).json({
