@@ -39,10 +39,14 @@ router.get('/:id/activeEvents', async (req, res, next) => {
         ]).toArray()
         active_events = active_events[0].active_events
 
-        res.status(200).json(active_events)
+        res.status(200).json({
+            status: "true",
+            data: active_events
+        })
     } catch (error) {
         console.log(error)
         res.status(500).json({
+            status: "false",
             error: error
         })
     }

@@ -9,10 +9,14 @@ const User = mongodb_connect.db.collection('users')
 router.get('/', async (req, res, next) => {
     try {
         const events = await Event.find({}).toArray()
-        res.status(200).json(events);
+        res.status(200).json({
+            status: "true",
+            data: events
+        });
     } catch (error) {
         res.status(500).json({
-        error: error
+            status: "false",
+            error: error
       });
     }
 })
