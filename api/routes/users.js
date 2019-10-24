@@ -19,6 +19,30 @@ router.get('/', async (req, res, next) => {
     }
 })
 
+// Retreives user by id
+router.get('/:id', async (req, res, next) => {
+    // const id = req.params.id
+    const id = new mongodb.ObjectID(req.params.id);
+    try {
+        const user = await User.findOne({
+            _id: id
+        })
+
+        if (user) {
+            res.status(200).json(user)
+        } else {
+            res.status(404).json({
+                message: 'No entry found for provided ID'
+            })
+        }
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            error: error
+        })
+    }
+})
+
 // Retrieves active events for a given user
 router.get('/:id/activeEvents', async (req, res, next) => {
     const id = new mongodb.ObjectID(req.params.id)
@@ -139,24 +163,29 @@ router.get('/:id/clicks', async (req, res, next) => {
     }
 })
 
-// Retreives user by id
-router.get('/:id', async (req, res, next) => {
-    // const id = req.params.id
-    const id = new mongodb.ObjectID(req.params.id);
+// DELETE ME !!! ONLY USED FOR IT OS PROJECT SINCE JAVA DOESN'T LIKE PATCH
+router.get('/:userId/joinEvent/:eventId', async (req, res, next) => {
+    const user_oid = new mongodb.ObjectID(req.params.userId)
+    const event_oid = new mongodb.ObjectID(req.params.eventId)
     try {
-        const user = await User.findOne({
-            _id: id
-        })
 
-        if (user) {
-            res.status(200).json(user)
-        } else {
-            res.status(404).json({
-                message: 'No entry found for provided ID'
-            })
-        }
+        // NEED TO CHECK IF USER ALREADY HAS EVENT
+        
+        const user = await User.findOneAndUpdate(
+            { _id: user_oid },
+            { $push: { active_events: event_oid } },
+            { returnOriginal: false }
+        )
+        const event = await Event.findOneAndUpdate(
+            { _id: event_oid },
+            { $push: { users: user_oid } },
+            { returnOriginal: false }
+        )
+        res.status(200).json({
+            updatedUser: user.value,
+            updatedEvent: event.value
+        })
     } catch (error) {
-        console.log(error)
         res.status(500).json({
             error: error
         })
@@ -168,6 +197,9 @@ router.patch('/:userId/joinEvent/:eventId', async (req, res, next) => {
     const user_oid = new mongodb.ObjectID(req.params.userId)
     const event_oid = new mongodb.ObjectID(req.params.eventId)
     try {
+
+        // NEED TO CHECK IF USER ALREADY HAS EVENT
+        
         const user = await User.findOneAndUpdate(
             { _id: user_oid },
             { $push: { active_events: event_oid } },
