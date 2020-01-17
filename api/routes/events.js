@@ -7,12 +7,53 @@ const Event = mongodb_connect.db.collection('events')
 const User = mongodb_connect.db.collection('users')
 
 router.get('/', async (req, res, next) => {
+    const validStatusValues = ["active", "complete", "archived"]
+    var queryOps = {}
+    if (req.query.hasOwnProperty('status')) {
+        if (validStatusValues.includes(req.query.status)) {
+            queryOps.status = req.query.status
+        } else {
+            res.status(400).json({
+                status: "false",
+                error: "Invalid value provided for event status."
+            });
+        }
+    }
+    if (req.query.hasOwnProperty('longitude') && req.query.hasOwnProperty('latitude') && req.query.hasOwnProperty('search_radius')) {
+        queryOps.location = { 
+            $near: {
+                $geometry: { 
+                    type: "Point", coordinates: [ parseFloat(req.query.longitude), parseFloat(req.query.latitude) ] 
+                },
+                $maxDistance: parseFloat(req.query.search_radius)
+            }
+        }
+    }
     try {
-        const events = await Event.find({}).toArray()
+        const events = await Event.find(queryOps).toArray()
         res.status(200).json({
             status: "true",
-            data: events
+            events: events
         });
+    } catch (error) {
+        res.status(500).json({
+            status: "false",
+            error: error
+        });
+    }
+})
+
+router.get('/active', async (req, res, next) => {
+    try {
+        const active_events = await Event.find(
+            {
+                status: "active"
+            }
+        )
+        res.status(200).json({
+            status: "true",
+            events: active_events
+        })
     } catch (error) {
         res.status(500).json({
             status: "false",
@@ -21,7 +62,7 @@ router.get('/', async (req, res, next) => {
     }
 })
 
-// Retrieves a list of active events
+// Retrieves a list of active events within a search radius
 router.post('/search', async (req, res, next) => {
     try {
         const events = await Event.find(

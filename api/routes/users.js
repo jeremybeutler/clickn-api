@@ -163,58 +163,39 @@ router.get('/:id/clicks', async (req, res, next) => {
     }
 })
 
-// DELETE ME !!! ONLY USED FOR IT OS PROJECT SINCE JAVA DOESN'T LIKE PATCH
-router.get('/:userId/joinEvent/:eventId', async (req, res, next) => {
-    const user_oid = new mongodb.ObjectID(req.params.userId)
-    const event_oid = new mongodb.ObjectID(req.params.eventId)
-    try {
-
-        // NEED TO CHECK IF USER ALREADY HAS EVENT
-        
-        const user = await User.findOneAndUpdate(
-            { _id: user_oid },
-            { $push: { active_events: event_oid } },
-            { returnOriginal: false }
-        )
-        const event = await Event.findOneAndUpdate(
-            { _id: event_oid },
-            { $push: { users: user_oid } },
-            { returnOriginal: false }
-        )
-        res.status(200).json({
-            updatedUser: user.value,
-            updatedEvent: event.value
-        })
-    } catch (error) {
-        res.status(500).json({
-            error: error
-        })
-    }
-})
-
 // Adds user to existing event
 router.patch('/:userId/joinEvent/:eventId', async (req, res, next) => {
     const user_oid = new mongodb.ObjectID(req.params.userId)
     const event_oid = new mongodb.ObjectID(req.params.eventId)
     try {
 
-        // NEED TO CHECK IF USER ALREADY HAS EVENT
-        
+        // NEED TO CHECK IF USER ALREADY HAS EVENT OR USE $addToSet
+
         const user = await User.findOneAndUpdate(
             { _id: user_oid },
             { $push: { active_events: event_oid } },
             { returnOriginal: false }
         )
-        const event = await Event.findOneAndUpdate(
+        var event = await Event.findOneAndUpdate(
             { _id: event_oid },
             { $push: { users: user_oid } },
             { returnOriginal: false }
         )
+        if (event.value.capacity == event.value.users.length) {
+            console.log('Event capacity reached!')
+            event = await Event.findOneAndUpdate(
+                { _id: event_oid },
+                { $set: { status: "full" } },
+                { returnOriginal: false }
+            )
+        }
+        console.log(event.value)
         res.status(200).json({
             updatedUser: user.value,
             updatedEvent: event.value
         })
     } catch (error) {
+        console.log(error)
         res.status(500).json({
             error: error
         })
