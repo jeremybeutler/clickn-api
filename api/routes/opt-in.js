@@ -1,44 +1,33 @@
 const express = require('express')
 const router = express.Router()
-// const mongoose = require('mongoose')
+const mongodb = require('mongodb')
+const mongodb_connect = require('../../mongodb-connect');
 
-// const OptIn = require('../models/opt-in')
+const OptIn = mongodb_connect.db.collection('optins')
 
 router.get('/', async (req, res, next) => {
     try {
-        const opt_in = await OptIn.find()
-        res.status(200).json(opt_in);
+        const optins = await OptIn.find({}).toArray()
+        res.status(200).json({
+            status: "true",
+            data: optins
+        });
     } catch (error) {
         res.status(500).json({
-        error: error
+            status: "false",
+            error: error
       });
     }
 })
 
-// router.post('/', async (req, res, next) => {
-//     try {
-//         const opt_in = new OptIn({
-//             _id: new mongoose.Types.ObjectId(),
-//             clicking_user: req.body.clicking_user_id,
-//             clicked_user: req.body.clicked_user_id,
-//             event: req.body.event_id
-//         })
-
-//         await opt_in.save()
-//     } catch (error) {
-//         console.log(error)
-//         res.status(500).json({
-//             error: error
-//         })
-//     }
-// })
-
 router.get('/:id', async (req, res, next) => {
-    const id = req.params.id
+    const id = new mongodb.ObjectID(req.params.id)
     try {
-        const opt_in = await OptIn.findById(id)
-        if (opt_in) {
-            res.status(200).json(opt_in)
+        const optin = await OptIn.findOne({
+            _id: id
+        })
+        if (optin) {
+            res.status(200).json(optin)
         } else {
             res.status(404).json({
                 message: 'No entry found for provided ID'
@@ -53,18 +42,19 @@ router.get('/:id', async (req, res, next) => {
     }
 })
 
-// router.delete('/:id', async (req, res, next) => {
-//     const id = req.params.id
-//     try {
-//         let result = await OptIn.remove({ _id: id })
-//         console.log(result)
-//         res.status(200).json(result)
-//     } catch (error) {
-//         console.log(error)
-//         res.status(500).json({
-//             error: error
-//         })
-//     }
-// })
+router.delete('/:id', async (req, res, next) => {
+    const id = new mongodb.ObjectID(req.params.id)
+    try {
+        let result = await Option.remove({ 
+            _id: id 
+        })
+        res.status(200).json(result)
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            error: error
+        })
+    }
+})
 
 module.exports = router
