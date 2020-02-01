@@ -6,6 +6,11 @@ const mongodb_connect = require('../../mongodb-connect');
 const Event = mongodb_connect.db.collection('events')
 const User = mongodb_connect.db.collection('users')
 
+const mbxClient = require('@mapbox/mapbox-sdk');
+const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
+const baseClient = mbxClient({ accessToken: "pk.eyJ1IjoiY2xpY2tuIiwiYSI6ImNrNTRlaGEyOTBpbDIzbG50N3I4MDA2Z28ifQ.7ZpTOY97E8FnnguaWxx-pA" });
+const geocodingService = mbxGeocoding(baseClient);
+
 router.get('/', async (req, res, next) => {
     const validStatusValues = ["active", "complete", "archived"]
     var queryOps = {}
@@ -143,8 +148,18 @@ router.post('/', async (req, res, next) => {
     let tags = []
     for (let tag in req.body.tags)
         tags.push(tag)
-
     try {
+        let reverseGeocodedAddress = await geocodingService.reverseGeocode({
+            query: [req.body.longitude, req.body.latitude],
+            limit: 1
+        }).send()
+        
+        if (reverseGeocodedAddress.body.features.length) {
+            reverseGeocodedAddress = reverseGeocodedAddress.body.features[0].place_name
+        } else {
+            reverseGeocodedAddress = null
+        }
+
         const event = await Event.insertOne({
             users: [owner_oid],
             owner: owner_oid,
@@ -165,6 +180,7 @@ router.post('/', async (req, res, next) => {
                     req.body.latitude
                 ]
             },
+            street_address: reverseGeocodedAddress,
             conversation: {
                 _id: new mongodb.ObjectId(),
                 created: new Date(),
