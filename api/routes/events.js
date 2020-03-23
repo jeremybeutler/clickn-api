@@ -5,6 +5,7 @@ const mongodb_connect = require('../../mongodb-connect');
 
 const Event = mongodb_connect.db.collection('events')
 const User = mongodb_connect.db.collection('users')
+const Tag = mongodb_connect.db.collection('tags')
 
 const mbxClient = require('@mapbox/mapbox-sdk');
 const mbxGeocoding = require('@mapbox/mapbox-sdk/services/geocoding');
@@ -145,10 +146,18 @@ router.patch('/complete/:eventId', async (req, res, next) => {
 
 router.post('/', async (req, res, next) => {
     let owner_oid = new mongodb.ObjectId(req.body.owner_id)
-    let tags = []
-    for (let tag in req.body.tags)
-        tags.push(tag)
     try {
+        let tags = []
+        for (const tag_id of req.body.tag_ids) {
+            let tag_oid = new mongodb.ObjectID(tag_id)
+            const tag = await Tag.findOne({
+                _id: tag_oid
+            })
+            if (tag) {
+                tags.push(tag)
+            }
+        }
+
         let reverseGeocodedAddress = await geocodingService.reverseGeocode({
             query: [req.body.longitude, req.body.latitude],
             limit: 1
@@ -160,13 +169,14 @@ router.post('/', async (req, res, next) => {
             reverseGeocodedAddress = null
         }
 
-        const event = await Event.insertOne({
+        let event_data = {
             users: [owner_oid],
             owner: owner_oid,
             capacity: req.body.capacity,
+            guest_invites_enabled: req.body.guest_invites_enabled,
             title: req.body.title,
             description: req.body.description,
-            tags: req.body.tags,
+            tags: tags,
             group_type: req.body.group_type,
             datetime_start: req.body.datetime_start,
             datetime_end: req.body.datetime_end,
@@ -185,7 +195,11 @@ router.post('/', async (req, res, next) => {
                 _id: new mongodb.ObjectId(),
                 created: new Date(),
             }
-        })
+        }
+        if (req.body.guest_invites_enabled) {
+            event_data.guest_invites = req.body.guest_invites
+        }
+        const event = await Event.insertOne(event_data)
         let event_oid = new mongodb.ObjectId(event.ops[0]._id)
         const user = await User.findOneAndUpdate(
             { _id: owner_oid },

@@ -7,6 +7,7 @@ const userRoutes = require('./api/routes/users')
 const eventRoutes = require('./api/routes/events')
 const clickRoutes = require('./api/routes/clicks')
 const optinRoutes = require('./api/routes/opt-in')
+const tagRoutes = require('./api/routes/tags')
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
@@ -28,6 +29,7 @@ app.use('/users', userRoutes)
 app.use('/events', eventRoutes)
 app.use('/clicks', clickRoutes)
 app.use('/optins', optinRoutes)
+app.use('/tags', tagRoutes)
 
 app.use((req, res, next) => {
     const error = new Error('Not found')

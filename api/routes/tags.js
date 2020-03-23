@@ -1,24 +1,33 @@
 const express = require('express')
 const router = express.Router()
-// const mongoose = require('mongoose')
+const mongodb = require('mongodb')
+const mongodb_connect = require('../../mongodb-connect');
 
-// const Tag = require('../models/tag')
+const Tag = mongodb_connect.db.collection('tags')
 
 router.get('/', async (req, res, next) => {
     try {
-        const tag = await Tag.find()
-        res.status(200).json(tag);
+        const tags = await Tag.find({}).toArray();
+        res.status(200).json({
+            status: "true",
+            tags: tags
+        });
     } catch (error) {
         res.status(500).json({
-        error: error
-      });
+            status: "false",
+            error: error
+        });
     }
 })
 
+// Retreives tag by id
 router.get('/:id', async (req, res, next) => {
-    const id = req.params.id
+    const id = new mongodb.ObjectID(req.params.id);
     try {
-        const tag = await Tag.findById(id)
+        const tag = await Tag.findOne({
+            _id: id
+        })
+
         if (tag) {
             res.status(200).json(tag)
         } else {
@@ -26,23 +35,6 @@ router.get('/:id', async (req, res, next) => {
                 message: 'No entry found for provided ID'
             })
         }
-    }
-    catch (error) {
-        console.log(error)
-        res.status(500).json({
-            error: error
-        })
-    }
-})
-
-router.post('/', async (req, res, next) => {
-    try {
-        const tag = new Tag({
-            _id: new mongoose.Types.ObjectId(),
-            text: req.body.title
-        })
-
-        await tag.save()
     } catch (error) {
         console.log(error)
         res.status(500).json({
@@ -51,10 +43,30 @@ router.post('/', async (req, res, next) => {
     }
 })
 
-router.delete('/:id', async (req, res, next) => {
-    const id = req.params.id
+// Creates new tag
+router.post('/', async (req, res, next) => {
     try {
-        let result = await Tag.remove({ _id: id })
+        let tag = await Tag.insertOne({
+            name: req.body.name
+        });
+        res.status(201).json({
+            createdTag: tag.ops[0]
+        })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({
+            error: error
+        })
+    }
+})
+
+// Removes tag by id
+router.delete('/:id', async (req, res, next) => {
+    const id = new mongodb.ObjectID(req.params.id)
+    try {
+        let result = await Tag.remove({ 
+            _id: id 
+        })
         console.log(result)
         res.status(200).json(result)
     } catch (error) {

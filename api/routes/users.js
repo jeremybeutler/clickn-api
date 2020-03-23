@@ -21,7 +21,6 @@ router.get('/', async (req, res, next) => {
 
 // Retreives user by id
 router.get('/:id', async (req, res, next) => {
-    // const id = req.params.id
     const id = new mongodb.ObjectID(req.params.id);
     try {
         const user = await User.findOne({
